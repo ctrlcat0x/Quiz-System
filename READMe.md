@@ -24,6 +24,20 @@ If your MySQL credentials are different, pass them directly:
 ./scripts/setup.ps1 -DbUser root -DbPass your_password
 ```
 
+To compile and launch the app later without rebuilding the classpath by hand:
+
+```powershell
+./scripts/run.ps1 -ConnectorJar "C:\path\to\mysql-connector-j-8.x.x.jar" -DbUser root -DbPass your_password
+```
+
+Or prompt for the database password without putting it in shell history:
+
+```powershell
+./scripts/run.ps1 -ConnectorJar "C:\path\to\mysql-connector-j-8.x.x.jar" -DbUser root -PromptForDbPass
+```
+
+If you omit `-ConnectorJar`, the script tries to auto-detect a `mysql-connector-j-*.jar` near the repo and its parent folder.
+
 ### Linux / macOS (bash)
 
 ```bash
@@ -64,8 +78,10 @@ javac -d out src\*.java
 4. Run (replace JAR path):
 
 ```powershell
-java -cp ".;out;C:\path\to\mysql-connector-j-8.x.x.jar" runner
+./scripts/run.ps1 -ConnectorJar "C:\path\to\mysql-connector-j-8.x.x.jar" -DbUser root -DbPass your_password
 ```
+
+If MySQL shows `Access denied for user 'root'@'localhost' (using password: NO)`, it means the app launched without a database password. Pass `-DbPass` to `scripts/run.ps1`, use `-PromptForDbPass`, or set `QUIZ_DB_PASS` before starting Java.
 
 Linux/macOS run template:
 
@@ -101,3 +117,5 @@ Detailed architecture, flow, data model, and transaction logic is documented in:
 - Existing plain-text passwords from older app versions still authenticate.
 - New and changed passwords are stored as SHA-256 (`sha256$...`).
 - App remains in the default Java package for simplicity.
+
+./scripts/run.ps1 -ConnectorJar "..\mysql-connector-j-9.6.0\mysql-connector-j-9.6.0.jar" -DbUser root -PromptForDbPass

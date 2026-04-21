@@ -53,7 +53,8 @@ public class guest {
 		currentQuestionIndex = 0;
 
 		frame = AppTheme.createFrame("Complete Quiz", 760, 560, JFrame.DISPOSE_ON_CLOSE);
-		frame.setResizable(false);
+		frame.setResizable(true);
+		frame.setMinimumSize(new Dimension(700, 520));
 		frame.setLayout(new BorderLayout(20, 20));
 		frame.getRootPane().setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
 
@@ -69,7 +70,10 @@ public class guest {
 		questionArea.setFont(AppTheme.SECTION_FONT);
 		questionArea.setBackground(AppTheme.SURFACE);
 		questionArea.setPreferredSize(new Dimension(620, 100));
-		card.add(new JScrollPane(questionArea), BorderLayout.NORTH);
+		JScrollPane questionScroll = new JScrollPane(questionArea);
+		questionScroll.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER, 1));
+		questionScroll.getVerticalScrollBar().setUnitIncrement(16);
+		card.add(questionScroll, BorderLayout.NORTH);
 
 		JPanel optionsPanel = new JPanel();
 		optionsPanel.setOpaque(false);
@@ -121,7 +125,11 @@ public class guest {
 		nextButton.addActionListener(e -> goToNextQuestion());
 
 		frame.add(header, BorderLayout.NORTH);
-		frame.add(card, BorderLayout.CENTER);
+		JScrollPane cardScroll = new JScrollPane(card, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		cardScroll.setBorder(BorderFactory.createEmptyBorder());
+		cardScroll.getViewport().setBackground(AppTheme.BACKGROUND);
+		cardScroll.getVerticalScrollBar().setUnitIncrement(18);
+		frame.add(cardScroll, BorderLayout.CENTER);
 
 		showQuestion();
 		frame.setVisible(true);
@@ -216,6 +224,8 @@ public class guest {
 			manage.submitQuizResponses(surveyCode, submittedAnswers);
 			JOptionPane.showMessageDialog(frame, "Quiz completed. Thanks for responding.", "Submitted", JOptionPane.INFORMATION_MESSAGE);
 			frame.dispose();
+		} catch (IllegalArgumentException ex) {
+			JOptionPane.showMessageDialog(frame, ex.getMessage(), "Incomplete Quiz", JOptionPane.WARNING_MESSAGE);
 		} catch (SQLException ex) {
 			JOptionPane.showMessageDialog(frame,
 				"Unable to submit your answers right now.\n\n" + ex.getMessage(),

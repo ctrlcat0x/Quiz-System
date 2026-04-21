@@ -28,7 +28,15 @@ CREATE TABLE IF NOT EXISTS questions (
 CREATE TABLE IF NOT EXISTS quizquestions (
     quizcode CHAR(5) NOT NULL,
     qno INT NOT NULL,
-    opno INT NOT NULL
+    opno INT NOT NULL,
+    response_id BIGINT NULL
+);
+
+CREATE TABLE IF NOT EXISTS response_sessions (
+    response_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    quizcode CHAR(5) NOT NULL,
+    respondent_label VARCHAR(100) NOT NULL DEFAULT 'Anonymous',
+    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 INSERT INTO actors (id, fname, uname, pass)

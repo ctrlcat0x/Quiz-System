@@ -36,5 +36,7 @@ javac -d out src\*.java
 
 Write-Host ""
 Write-Host "Setup complete."
-Write-Host "Use this command to run (adjust connector JAR path):"
-Write-Host 'java -cp ".;out;C:\path\to\mysql-connector-j-8.x.x.jar" runner'
+Write-Host "Use this helper to compile and run with DB settings:"
+Write-Host './scripts/run.ps1 -ConnectorJar "C:\path\to\mysql-connector-j-8.x.x.jar" -DbUser root -DbPass your_password'
+Write-Host 'Or prompt securely for the password:'
+Write-Host './scripts/run.ps1 -ConnectorJar "C:\path\to\mysql-connector-j-8.x.x.jar" -DbUser root -PromptForDbPass'

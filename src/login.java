@@ -161,6 +161,9 @@ public class login {
 
 	private void showDatabaseError(Component parent, String action, SQLException ex) {
 		String message = "Unable to " + action + ". Check your database settings and make sure MySQL is running.\n\n" + ex.getMessage();
+		if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("access denied for user")) {
+			message += "\n\nMySQL rejected the username or password. Start the app with the correct QUIZ_DB_USER and QUIZ_DB_PASS values, or use scripts/run.ps1 -DbUser <user> -DbPass <password>.";
+		}
 		JOptionPane.showMessageDialog(parent, message, "Database Error", JOptionPane.ERROR_MESSAGE);
 	}
 }

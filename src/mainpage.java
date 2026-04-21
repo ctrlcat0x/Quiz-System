@@ -4,6 +4,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.Rectangle;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,10 +21,13 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.Scrollable;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -53,6 +57,8 @@ public class mainpage {
 	private JLabel selectedQuizCodeLabel;
 	private JLabel selectedResponsesLabel;
 	private JTextArea analyticsQuestionArea;
+	private JTextArea responseHistoryArea;
+	private JLabel responseHistoryHintLabel;
 	private JLabel[] analyticsOptionLabels;
 	private JLabel[] analyticsVoteLabels;
 	private JButton previousQuestionButton;
@@ -60,9 +66,11 @@ public class mainpage {
 	private JButton deleteQuizButton;
 	private final List<QuizQuestion> draftQuestions = new ArrayList<QuizQuestion>();
 	private List<QuizQuestion> selectedQuizQuestions = new ArrayList<QuizQuestion>();
+	private List<QuizResponseRecord> selectedResponseRecords = new ArrayList<QuizResponseRecord>();
 	private String selectedQuizCode;
 	private int selectedQuizResponses;
 	private int selectedQuestionIndex;
+	private boolean selectedQuizHasLegacyResponses;
 
 	public void mainPageView(int id) {
 		this.id = id;
@@ -81,7 +89,8 @@ public class mainpage {
 		}
 
 		frame = AppTheme.createFrame("Quiz Dashboard", 1180, 760, JFrame.EXIT_ON_CLOSE);
-		frame.setResizable(false);
+		frame.setResizable(true);
+		frame.setMinimumSize(new Dimension(1060, 720));
 		frame.setLayout(new BorderLayout());
 
 		frame.add(createSidebar(), BorderLayout.WEST);
@@ -90,8 +99,8 @@ public class mainpage {
 		contentPanel = new JPanel(contentLayout);
 		contentPanel.setBackground(AppTheme.BACKGROUND);
 		contentPanel.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
-		contentPanel.add(createBuilderView(), "builder");
-		contentPanel.add(createLibraryView(), "library");
+		contentPanel.add(createScrollableView(createBuilderView()), "builder");
+		contentPanel.add(createScrollableView(createLibraryView()), "library");
 		frame.add(contentPanel, BorderLayout.CENTER);
 
 		switchView("builder");
@@ -116,7 +125,7 @@ public class mainpage {
 		sidebar.add(brand);
 		sidebar.add(Box.createVerticalStrut(4));
 
-		JLabel welcome = new JLabel(AppTheme.html("Signed in as <b>" + username + "</b>", 180));
+		JLabel welcome = AppTheme.createMutedLabel("Signed in as " + username);
 		welcome.setFont(AppTheme.SMALL_FONT);
 		welcome.setForeground(AppTheme.TEXT_SECONDARY);
 		welcome.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -164,11 +173,13 @@ public class mainpage {
 
 		page.add(createPageHeader("Create a Quiz", "Build questions on the left, review the draft on the right, and publish when it is ready."), BorderLayout.NORTH);
 
-		JPanel body = new JPanel(new GridLayout(1, 2, 20, 0));
-		body.setOpaque(false);
-		body.add(createBuilderFormCard());
-		body.add(createDraftPreviewCard());
-		page.add(body, BorderLayout.CENTER);
+		JSplitPane bodySplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createBuilderFormCard(), createDraftPreviewCard());
+		bodySplit.setResizeWeight(0.7);
+		bodySplit.setDividerSize(10);
+		bodySplit.setBorder(BorderFactory.createEmptyBorder());
+		bodySplit.setOpaque(false);
+		bodySplit.setContinuousLayout(true);
+		page.add(bodySplit, BorderLayout.CENTER);
 
 		return page;
 	}
@@ -195,9 +206,11 @@ public class mainpage {
 		form.add(createFormLabel("Question"));
 		form.add(Box.createVerticalStrut(6));
 		questionInput = AppTheme.createTextArea(5, 20, true);
+		questionInput.getDocument().addDocumentListener(createDraftStateListener());
 		JScrollPane questionScroll = new JScrollPane(questionInput);
 		questionScroll.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER, 1));
 		questionScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+		questionScroll.getVerticalScrollBar().setUnitIncrement(16);
 		form.add(questionScroll);
 		form.add(Box.createVerticalStrut(16));
 
@@ -206,6 +219,7 @@ public class mainpage {
 		optionInputs = new JTextField[4];
 		for (int index = 0; index < optionInputs.length; index++) {
 			optionInputs[index] = AppTheme.createTextField(18);
+			optionInputs[index].getDocument().addDocumentListener(createDraftStateListener());
 			optionsGrid.add(createOptionFieldPanel("Option " + (index + 1), optionInputs[index]));
 		}
 		form.add(optionsGrid);
@@ -254,21 +268,31 @@ public class mainpage {
 		draftList.addListSelectionListener(e -> updateDraftState());
 		JScrollPane draftListScroll = new JScrollPane(draftList);
 		draftListScroll.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER, 1));
+		draftListScroll.getVerticalScrollBar().setUnitIncrement(16);
 		card.add(draftListScroll, BorderLayout.CENTER);
 
-		JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+		JPanel actions = new JPanel();
 		actions.setOpaque(false);
+		actions.setLayout(new BoxLayout(actions, BoxLayout.Y_AXIS));
+
+		JPanel utilityActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+		utilityActions.setOpaque(false);
 		removeDraftButton = AppTheme.createSecondaryButton("Remove Selected");
 		removeDraftButton.addActionListener(e -> removeSelectedDraftQuestion());
-		actions.add(removeDraftButton);
+		utilityActions.add(removeDraftButton);
 
 		clearDraftButton = AppTheme.createSecondaryButton("Clear Draft");
 		clearDraftButton.addActionListener(e -> clearDraft());
-		actions.add(clearDraftButton);
+		utilityActions.add(clearDraftButton);
+		actions.add(utilityActions);
+		actions.add(Box.createVerticalStrut(12));
 
-		submitQuizButton = AppTheme.createPrimaryButton("Create Quiz");
+		submitQuizButton = AppTheme.createPrimaryButton("Publish Quiz");
 		submitQuizButton.addActionListener(e -> submitQuiz());
-		actions.add(submitQuizButton);
+		JPanel publishRow = new JPanel(new BorderLayout());
+		publishRow.setOpaque(false);
+		publishRow.add(submitQuizButton, BorderLayout.CENTER);
+		actions.add(publishRow);
 
 		card.add(actions, BorderLayout.SOUTH);
 		updateDraftState();
@@ -280,11 +304,13 @@ public class mainpage {
 		page.setOpaque(false);
 		page.add(createPageHeader("Quiz Library", "Search your quizzes, inspect response counts, and browse question-by-question analytics."), BorderLayout.NORTH);
 
-		JPanel body = new JPanel(new GridLayout(2, 1, 0, 20));
-		body.setOpaque(false);
-		body.add(createQuizTableCard());
-		body.add(createAnalyticsCard());
-		page.add(body, BorderLayout.CENTER);
+		JSplitPane bodySplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, createQuizTableCard(), createAnalyticsCard());
+		bodySplit.setResizeWeight(0.34);
+		bodySplit.setDividerSize(10);
+		bodySplit.setBorder(BorderFactory.createEmptyBorder());
+		bodySplit.setOpaque(false);
+		bodySplit.setContinuousLayout(true);
+		page.add(bodySplit, BorderLayout.CENTER);
 
 		return page;
 	}
@@ -353,6 +379,7 @@ public class mainpage {
 
 		JScrollPane tableScroll = new JScrollPane(quizTable);
 		tableScroll.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER, 1));
+		tableScroll.getVerticalScrollBar().setUnitIncrement(16);
 		card.add(tableScroll, BorderLayout.CENTER);
 		return card;
 	}
@@ -372,19 +399,25 @@ public class mainpage {
 		details.setOpaque(false);
 		details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
 
-		details.add(createFormLabel("Question"));
+		JLabel questionLabel = createFormLabel("Question");
+		questionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		details.add(questionLabel);
 		details.add(Box.createVerticalStrut(6));
 		analyticsQuestionArea = AppTheme.createTextArea(4, 20, false);
 		analyticsQuestionArea.setBackground(AppTheme.SURFACE_ALT);
-		analyticsQuestionArea.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(AppTheme.BORDER, 1),
-			BorderFactory.createEmptyBorder(10, 12, 10, 12)
-		));
-		details.add(analyticsQuestionArea);
+		JScrollPane analyticsQuestionScroll = new JScrollPane(analyticsQuestionArea);
+		analyticsQuestionScroll.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER, 1));
+		analyticsQuestionScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+		analyticsQuestionScroll.setPreferredSize(new Dimension(0, 110));
+		analyticsQuestionScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
+		analyticsQuestionScroll.getVerticalScrollBar().setUnitIncrement(16);
+		details.add(analyticsQuestionScroll);
 		details.add(Box.createVerticalStrut(16));
 
 		JPanel answersPanel = new JPanel(new GridLayout(4, 1, 0, 10));
 		answersPanel.setOpaque(false);
+		answersPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		answersPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
 		analyticsOptionLabels = new JLabel[4];
 		analyticsVoteLabels = new JLabel[4];
 		for (int index = 0; index < 4; index++) {
@@ -403,6 +436,34 @@ public class mainpage {
 			answersPanel.add(row);
 		}
 		details.add(answersPanel);
+		details.add(Box.createVerticalStrut(18));
+
+		JPanel responseHistoryPanel = new JPanel(new BorderLayout(0, 8));
+		responseHistoryPanel.setOpaque(false);
+		responseHistoryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		responseHistoryPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+
+		JPanel responseHistoryHeader = new JPanel();
+		responseHistoryHeader.setOpaque(false);
+		responseHistoryHeader.setLayout(new BoxLayout(responseHistoryHeader, BoxLayout.Y_AXIS));
+		JLabel responseHistoryTitle = AppTheme.createSectionLabel("Response History");
+		responseHistoryTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+		responseHistoryHeader.add(responseHistoryTitle);
+		responseHistoryHeader.add(Box.createVerticalStrut(6));
+		responseHistoryHintLabel = AppTheme.createMutedLabel("Timestamped anonymous submissions will appear here.");
+		responseHistoryHintLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		responseHistoryHeader.add(responseHistoryHintLabel);
+		responseHistoryPanel.add(responseHistoryHeader, BorderLayout.NORTH);
+
+		responseHistoryArea = AppTheme.createTextArea(12, 20, false);
+		JScrollPane responseHistoryScroll = new JScrollPane(responseHistoryArea);
+		responseHistoryScroll.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER, 1));
+		responseHistoryScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+		responseHistoryScroll.setPreferredSize(new Dimension(0, 220));
+		responseHistoryScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		responseHistoryScroll.getVerticalScrollBar().setUnitIncrement(16);
+		responseHistoryPanel.add(responseHistoryScroll, BorderLayout.CENTER);
+		details.add(responseHistoryPanel);
 
 		card.add(details, BorderLayout.CENTER);
 
@@ -464,6 +525,7 @@ public class mainpage {
 		JLabel label = new JLabel(text);
 		label.setFont(AppTheme.LABEL_FONT);
 		label.setForeground(AppTheme.TEXT_SECONDARY);
+		label.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return label;
 	}
 
@@ -525,6 +587,7 @@ public class mainpage {
 		for (JTextField optionInput : optionInputs) {
 			optionInput.setText("");
 		}
+		updateDraftState();
 	}
 
 	private void refreshDraftListModel() {
@@ -548,6 +611,25 @@ public class mainpage {
 		removeDraftButton.setEnabled(draftList.getSelectedIndex() >= 0);
 		clearDraftButton.setEnabled(count > 0 || hasPendingFormInput());
 		submitQuizButton.setEnabled(count > 0);
+	}
+
+	private DocumentListener createDraftStateListener() {
+		return new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				updateDraftState();
+			}
+
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				updateDraftState();
+			}
+
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				updateDraftState();
+			}
+		};
 	}
 
 	private boolean hasPendingFormInput() {
@@ -639,6 +721,8 @@ public class mainpage {
 				questions.get(index).setVoteCounts(manage.getVoteCounts(selectedQuizCode, index + 1));
 			}
 			selectedQuizQuestions = questions;
+			selectedResponseRecords = manage.getQuizResponseRecords(selectedQuizCode, questions.size());
+			selectedQuizHasLegacyResponses = manage.hasLegacyQuizResponses(selectedQuizCode);
 			selectedQuestionIndex = 0;
 			renderSelectedQuestion();
 		} catch (SQLException ex) {
@@ -654,7 +738,11 @@ public class mainpage {
 
 		QuizQuestion question = selectedQuizQuestions.get(selectedQuestionIndex);
 		selectedQuizCodeLabel.setText("Quiz " + selectedQuizCode + "  •  Question " + (selectedQuestionIndex + 1) + " of " + selectedQuizQuestions.size());
-		selectedResponsesLabel.setText(selectedQuizResponses + (selectedQuizResponses == 1 ? " response recorded" : " responses recorded"));
+		String responseText = selectedQuizResponses + (selectedQuizResponses == 1 ? " response recorded" : " responses recorded");
+		if (!selectedResponseRecords.isEmpty()) {
+			responseText += "  •  " + selectedResponseRecords.size() + (selectedResponseRecords.size() == 1 ? " detailed submission" : " detailed submissions");
+		}
+		selectedResponsesLabel.setText(responseText);
 		analyticsQuestionArea.setText(question.getPrompt());
 		analyticsQuestionArea.setCaretPosition(0);
 
@@ -666,13 +754,16 @@ public class mainpage {
 		previousQuestionButton.setEnabled(selectedQuestionIndex > 0);
 		nextQuestionButton.setEnabled(selectedQuestionIndex < selectedQuizQuestions.size() - 1);
 		deleteQuizButton.setEnabled(true);
+		renderResponseHistory();
 	}
 
 	private void clearSelectedQuiz() {
 		selectedQuizCode = null;
 		selectedQuizResponses = 0;
 		selectedQuizQuestions = new ArrayList<QuizQuestion>();
+		selectedResponseRecords = new ArrayList<QuizResponseRecord>();
 		selectedQuestionIndex = 0;
+		selectedQuizHasLegacyResponses = false;
 
 		if (selectedQuizCodeLabel != null) {
 			selectedQuizCodeLabel.setText("Select a quiz");
@@ -682,6 +773,12 @@ public class mainpage {
 		}
 		if (analyticsQuestionArea != null) {
 			analyticsQuestionArea.setText("");
+		}
+		if (responseHistoryArea != null) {
+			responseHistoryArea.setText("");
+		}
+		if (responseHistoryHintLabel != null) {
+			responseHistoryHintLabel.setText("Choose a quiz above to inspect timestamped response entries.");
 		}
 		if (analyticsOptionLabels != null) {
 			for (JLabel optionLabel : analyticsOptionLabels) {
@@ -701,6 +798,119 @@ public class mainpage {
 		}
 		if (deleteQuizButton != null) {
 			deleteQuizButton.setEnabled(false);
+		}
+	}
+
+	private void renderResponseHistory() {
+		if (responseHistoryArea == null || responseHistoryHintLabel == null) {
+			return;
+		}
+
+		if (selectedQuizCode == null) {
+			responseHistoryHintLabel.setText("Choose a quiz above to inspect timestamped response entries.");
+			responseHistoryArea.setText("");
+			return;
+		}
+
+		if (selectedResponseRecords.isEmpty()) {
+			if (selectedQuizHasLegacyResponses) {
+				responseHistoryHintLabel.setText("Legacy responses are counted above, but they do not include per-attempt timestamps or selected answers.");
+				responseHistoryArea.setText("Detailed response history is only available for submissions recorded after this update.\n\nSubmit the quiz again to generate timestamped anonymous entries here.");
+			} else {
+				responseHistoryHintLabel.setText("No detailed submissions have been recorded for this quiz yet.");
+				responseHistoryArea.setText("");
+			}
+			responseHistoryArea.setCaretPosition(0);
+			return;
+		}
+
+		responseHistoryHintLabel.setText(selectedResponseRecords.size()
+			+ (selectedResponseRecords.size() == 1 ? " anonymous submission shown below." : " anonymous submissions shown below."));
+
+		StringBuilder history = new StringBuilder();
+		for (int recordIndex = 0; recordIndex < selectedResponseRecords.size(); recordIndex++) {
+			QuizResponseRecord record = selectedResponseRecords.get(recordIndex);
+			history.append(record.getRespondentLabel())
+				.append(" • ")
+				.append(record.getSubmittedAtDisplay())
+				.append('\n');
+
+			for (int questionIndex = 0; questionIndex < selectedQuizQuestions.size(); questionIndex++) {
+				QuizQuestion question = selectedQuizQuestions.get(questionIndex);
+				history.append("Q")
+					.append(questionIndex + 1)
+					.append(": ")
+					.append(question.getPreviewText())
+					.append('\n')
+					.append("   Chose: ");
+
+				int selectedOption = record.getAnswer(questionIndex);
+				if (selectedOption >= 1 && selectedOption <= 4) {
+					history.append(selectedOption)
+						.append(". ")
+						.append(question.getOption(selectedOption - 1));
+				} else {
+					history.append("No answer recorded");
+				}
+				history.append('\n');
+			}
+
+			if (recordIndex < selectedResponseRecords.size() - 1) {
+				history.append('\n');
+			}
+		}
+
+		if (selectedQuizHasLegacyResponses) {
+			history.append('\n')
+				.append("Legacy responses recorded before this update are still included in the vote totals above, but they do not contain per-attempt timestamps or selected answers.");
+		}
+
+		responseHistoryArea.setText(history.toString());
+		responseHistoryArea.setCaretPosition(0);
+	}
+
+	private JScrollPane createScrollableView(JPanel view) {
+		ViewportPanel viewportPanel = new ViewportPanel(new BorderLayout());
+		viewportPanel.setOpaque(false);
+		viewportPanel.add(view, BorderLayout.CENTER);
+
+		JScrollPane scrollPane = new JScrollPane(viewportPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		scrollPane.setBorder(BorderFactory.createEmptyBorder());
+		scrollPane.getViewport().setBackground(AppTheme.BACKGROUND);
+		scrollPane.getVerticalScrollBar().setUnitIncrement(18);
+		return scrollPane;
+	}
+
+	private static final class ViewportPanel extends JPanel implements Scrollable {
+		private static final long serialVersionUID = 1L;
+
+		private ViewportPanel(BorderLayout layout) {
+			super(layout);
+		}
+
+		@Override
+		public Dimension getPreferredScrollableViewportSize() {
+			return getPreferredSize();
+		}
+
+		@Override
+		public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+			return 18;
+		}
+
+		@Override
+		public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+			return orientation == SwingConstants.VERTICAL ? visibleRect.height - 18 : visibleRect.width - 18;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportWidth() {
+			return true;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportHeight() {
+			return false;
 		}
 	}
 

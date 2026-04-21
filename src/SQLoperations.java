@@ -6,8 +6,13 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class SQLoperations implements AutoCloseable {
@@ -17,6 +22,7 @@ public class SQLoperations implements AutoCloseable {
 	private static final String DB_PASS = "";
 	private static final String HASH_PREFIX = "sha256$";
 	private static final String QUIZ_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+	private static boolean responseSchemaEnsured;
 
 	private final Connection con;
 
@@ -26,6 +32,7 @@ public class SQLoperations implements AutoCloseable {
 			resolveSetting("quiz.db.user", "QUIZ_DB_USER", DB_USER),
 			resolveSetting("quiz.db.pass", "QUIZ_DB_PASS", DB_PASS)
 		);
+		ensureResponseTrackingSchema();
 	}
 
 	public void newUser(String name, String uname, String pass) throws SQLException {
@@ -206,17 +213,34 @@ public class SQLoperations implements AutoCloseable {
 			throw new IllegalArgumentException("Answers are required.");
 		}
 
+		for (Integer answer : answers) {
+			int selectedOption = answer == null ? 0 : answer.intValue();
+			if (selectedOption < 1 || selectedOption > 4) {
+				throw new IllegalArgumentException("Each answer must choose one of the four options.");
+			}
+		}
+
 		boolean originalAutoCommit = con.getAutoCommit();
 		con.setAutoCommit(false);
 		String normalizedCode = clean(quizCode).toUpperCase();
 
-		try (PreparedStatement insertAnswer = con.prepareStatement("INSERT INTO quizquestions(quizcode, qno, opno) VALUES (?, ?, ?)");
+		try (PreparedStatement insertResponse = con.prepareStatement(
+				"INSERT INTO response_sessions(quizcode, respondent_label) VALUES (?, ?)",
+				Statement.RETURN_GENERATED_KEYS);
+			 PreparedStatement insertAnswer = con.prepareStatement("INSERT INTO quizquestions(quizcode, qno, opno, response_id) VALUES (?, ?, ?, ?)");
 			 PreparedStatement updateTotal = con.prepareStatement("UPDATE userQuestions SET total = total + 1 WHERE quizcode = ?")) {
+
+			insertResponse.setString(1, normalizedCode);
+			insertResponse.setString(2, "Anonymous");
+			insertResponse.executeUpdate();
+
+			long responseId = extractGeneratedId(insertResponse);
 
 			for (int index = 0; index < answers.size(); index++) {
 				insertAnswer.setString(1, normalizedCode);
 				insertAnswer.setInt(2, index + 1);
 				insertAnswer.setInt(3, answers.get(index).intValue());
+				insertAnswer.setLong(4, responseId);
 				insertAnswer.addBatch();
 			}
 
@@ -232,17 +256,72 @@ public class SQLoperations implements AutoCloseable {
 		}
 	}
 
+	public List<QuizResponseRecord> getQuizResponseRecords(String quizCode, int questionCount) throws SQLException {
+		Map<Long, QuizResponseRecord> responseById = new LinkedHashMap<Long, QuizResponseRecord>();
+		String normalizedCode = clean(quizCode).toUpperCase();
+
+		String sessionsSql = "SELECT response_id, respondent_label, submitted_at FROM response_sessions WHERE quizcode = ? ORDER BY submitted_at DESC, response_id DESC";
+		try (PreparedStatement pst = con.prepareStatement(sessionsSql)) {
+			pst.setString(1, normalizedCode);
+			try (ResultSet rst = pst.executeQuery()) {
+				while (rst.next()) {
+					Timestamp submittedAt = rst.getTimestamp("submitted_at");
+					LocalDateTime submittedAtValue = submittedAt == null ? null : submittedAt.toLocalDateTime();
+					QuizResponseRecord record = new QuizResponseRecord(
+						rst.getLong("response_id"),
+						rst.getString("respondent_label"),
+						submittedAtValue,
+						questionCount);
+					responseById.put(Long.valueOf(record.getResponseId()), record);
+				}
+			}
+		}
+
+		if (responseById.isEmpty()) {
+			return new ArrayList<QuizResponseRecord>();
+		}
+
+		String answersSql = "SELECT response_id, qno, opno FROM quizquestions WHERE quizcode = ? AND response_id IS NOT NULL ORDER BY response_id DESC, qno ASC";
+		try (PreparedStatement pst = con.prepareStatement(answersSql)) {
+			pst.setString(1, normalizedCode);
+			try (ResultSet rst = pst.executeQuery()) {
+				while (rst.next()) {
+					QuizResponseRecord record = responseById.get(Long.valueOf(rst.getLong("response_id")));
+					if (record != null) {
+						record.setAnswer(rst.getInt("qno") - 1, rst.getInt("opno"));
+					}
+				}
+			}
+		}
+
+		return new ArrayList<QuizResponseRecord>(responseById.values());
+	}
+
+	public boolean hasLegacyQuizResponses(String quizCode) throws SQLException {
+		String sql = "SELECT 1 FROM quizquestions WHERE quizcode = ? AND response_id IS NULL LIMIT 1";
+		try (PreparedStatement pst = con.prepareStatement(sql)) {
+			pst.setString(1, clean(quizCode).toUpperCase());
+			try (ResultSet rst = pst.executeQuery()) {
+				return rst.next();
+			}
+		}
+	}
+
 	public void removeSurvey(String quizCode) throws SQLException {
 		boolean originalAutoCommit = con.getAutoCommit();
 		con.setAutoCommit(false);
 		String normalizedCode = clean(quizCode).toUpperCase();
 
 		try (PreparedStatement deleteAnswers = con.prepareStatement("DELETE FROM quizquestions WHERE quizcode = ?");
+			 PreparedStatement deleteResponseSessions = con.prepareStatement("DELETE FROM response_sessions WHERE quizcode = ?");
 			 PreparedStatement deleteQuestions = con.prepareStatement("DELETE FROM questions WHERE quizcode = ?");
 			 PreparedStatement deleteQuiz = con.prepareStatement("DELETE FROM userQuestions WHERE quizcode = ?")) {
 
 			deleteAnswers.setString(1, normalizedCode);
 			deleteAnswers.executeUpdate();
+
+			deleteResponseSessions.setString(1, normalizedCode);
+			deleteResponseSessions.executeUpdate();
 
 			deleteQuestions.setString(1, normalizedCode);
 			deleteQuestions.executeUpdate();
@@ -295,6 +374,53 @@ public class SQLoperations implements AutoCloseable {
 
 	private static String clean(String value) {
 		return value == null ? "" : value.trim();
+	}
+
+	private void ensureResponseTrackingSchema() throws SQLException {
+		synchronized (SQLoperations.class) {
+			if (responseSchemaEnsured) {
+				return;
+			}
+
+			try (PreparedStatement createTable = con.prepareStatement(
+					"CREATE TABLE IF NOT EXISTS response_sessions ("
+						+ "response_id BIGINT PRIMARY KEY AUTO_INCREMENT, "
+						+ "quizcode CHAR(5) NOT NULL, "
+						+ "respondent_label VARCHAR(100) NOT NULL DEFAULT 'Anonymous', "
+						+ "submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)")) {
+				createTable.executeUpdate();
+			}
+
+			if (!columnExists("quizquestions", "response_id")) {
+				try (PreparedStatement alterTable = con.prepareStatement("ALTER TABLE quizquestions ADD COLUMN response_id BIGINT NULL")) {
+					alterTable.executeUpdate();
+				}
+			}
+
+			responseSchemaEnsured = true;
+		}
+	}
+
+	private boolean columnExists(String tableName, String columnName) throws SQLException {
+		String sql = "SELECT 1 FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ? LIMIT 1";
+		try (PreparedStatement pst = con.prepareStatement(sql)) {
+			pst.setString(1, con.getCatalog());
+			pst.setString(2, tableName);
+			pst.setString(3, columnName);
+			try (ResultSet rst = pst.executeQuery()) {
+				return rst.next();
+			}
+		}
+	}
+
+	private long extractGeneratedId(PreparedStatement statement) throws SQLException {
+		try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+			if (generatedKeys.next()) {
+				return generatedKeys.getLong(1);
+			}
+		}
+
+		throw new SQLException("Unable to create a response record for this quiz submission.");
 	}
 
 	private static void requireNotBlank(String value, String fieldName) {
