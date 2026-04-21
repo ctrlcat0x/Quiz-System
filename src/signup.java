@@ -1,12 +1,11 @@
-import java.awt.Font;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.sql.SQLException;
 
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
+import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -16,148 +15,137 @@ import javax.swing.JTextField;
 
 public class signup {
 
-	private static final Color PRIMARY = new Color(99, 102, 241);
-	private static final Color BG_COLOR = new Color(249, 250, 251);
-	private static final Color CARD_COLOR = Color.WHITE;
-	private static final Font HEADING_FONT = new Font("SansSerif", Font.BOLD, 26);
-	private static final Font LABEL_FONT = new Font("SansSerif", Font.PLAIN, 13);
-	private static final Font FIELD_FONT = new Font("SansSerif", Font.PLAIN, 14);
-	private static final Font BUTTON_FONT = new Font("SansSerif", Font.BOLD, 13);
-
 	public void signUpView() {
-		JFrame frame = new JFrame("Quiz System - Sign Up");
-		frame.setSize(460, 480);
-		frame.setLayout(null);
-		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-		frame.getContentPane().setBackground(BG_COLOR);
-		frame.setLocationRelativeTo(null);
+		final JFrame frame = AppTheme.createFrame("Create Account", 560, 620, JFrame.DISPOSE_ON_CLOSE);
 		frame.setResizable(false);
+		frame.setLayout(new GridBagLayout());
 
-		JPanel card = new JPanel();
-		card.setBounds(30, 20, 390, 410);
-		card.setLayout(null);
-		card.setBackground(CARD_COLOR);
-		card.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(new Color(229, 231, 235), 1),
-			BorderFactory.createEmptyBorder(20, 20, 20, 20)
-		));
-		frame.add(card);
+		JPanel shell = new JPanel();
+		shell.setOpaque(false);
+		shell.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+		shell.setLayout(new BoxLayout(shell, BoxLayout.Y_AXIS));
 
-		JLabel heading = new JLabel("Create Account");
-		heading.setBounds(0, 15, 390, 35);
-		heading.setHorizontalAlignment(JLabel.CENTER);
-		heading.setFont(HEADING_FONT);
-		heading.setForeground(PRIMARY);
-		card.add(heading);
+		JPanel card = AppTheme.createCard(new GridBagLayout(), 30);
+		card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-		JLabel fName = new JLabel("Full Name");
-		fName.setBounds(35, 70, 150, 20);
-		fName.setFont(LABEL_FONT);
-		fName.setForeground(new Color(75, 85, 99));
-		card.add(fName);
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		gbc.gridwidth = 2;
+		gbc.weightx = 1.0;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.anchor = GridBagConstraints.WEST;
+		gbc.insets = new Insets(0, 0, 8, 0);
 
-		JTextField fNameField = new JTextField();
-		fNameField.setBounds(35, 92, 320, 32);
-		fNameField.setFont(FIELD_FONT);
-		fNameField.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
-			BorderFactory.createEmptyBorder(4, 10, 4, 10)
-		));
-		card.add(fNameField);
-		
-		JLabel uName = new JLabel("Username");
-		uName.setBounds(35, 132, 150, 20);
-		uName.setFont(LABEL_FONT);
-		uName.setForeground(new Color(75, 85, 99));
-		card.add(uName);
-		
-		JTextField uNameField = new JTextField();
-		uNameField.setBounds(35, 154, 320, 32);
-		uNameField.setFont(FIELD_FONT);
-		uNameField.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
-			BorderFactory.createEmptyBorder(4, 10, 4, 10)
-		));
-		card.add(uNameField);
-		
-		JLabel uPass = new JLabel("Password");
-		uPass.setBounds(35, 194, 150, 20);
-		uPass.setFont(LABEL_FONT);
-		uPass.setForeground(new Color(75, 85, 99));
-		card.add(uPass);
-		
-		JPasswordField uPassField = new JPasswordField();
-		uPassField.setBounds(35, 216, 150, 32);
-		uPassField.setFont(FIELD_FONT);
-		uPassField.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
-			BorderFactory.createEmptyBorder(4, 10, 4, 10)
-		));
-		card.add(uPassField);
-		
-		JLabel uPass2 = new JLabel("Confirm Password");
-		uPass2.setBounds(205, 194, 150, 20);
-		uPass2.setFont(LABEL_FONT);
-		uPass2.setForeground(new Color(75, 85, 99));
-		card.add(uPass2);
-		
-		JPasswordField uPassField2 = new JPasswordField();
-		uPassField2.setBounds(205, 216, 150, 32);
-		uPassField2.setFont(FIELD_FONT);
-		uPassField2.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
-			BorderFactory.createEmptyBorder(4, 10, 4, 10)
-		));
-		card.add(uPassField2);
-		
-		JButton submit = new JButton("CREATE ACCOUNT");
-		submit.setBounds(35, 275, 320, 38);
-		submit.setFont(BUTTON_FONT);
-		submit.setBackground(PRIMARY);
-		submit.setForeground(Color.WHITE);
-		submit.setFocusPainted(false);
-		submit.setBorderPainted(false);
-		submit.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		card.add(submit);
-		submit.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				String fname = fNameField.getText();
-				String uname = uNameField.getText();
-				String pass1 = new String(uPassField.getPassword());
-				String pass2 = new String(uPassField2.getPassword());
-				if(fname.isEmpty() || uname.isEmpty() || pass1.isEmpty()|| pass2.isEmpty()) {
-					JOptionPane.showMessageDialog(frame, "Please enter all information.", "Warning", JOptionPane.WARNING_MESSAGE);
-				}
-				else {
-					if(pass1.equals(pass2)) {
-						try {
-							SQLoperations manage = new SQLoperations();
-							if (manage.checkUsername(uname)) {
-								JOptionPane.showMessageDialog(frame, "Username already taken. Please choose another.", "Warning", JOptionPane.WARNING_MESSAGE);
-								return;
-							}
-							manage.newUser(fname, uname, pass1);
-							fNameField.setText("");
-							uNameField.setText("");
-							uPassField.setText("");
-							uPassField2.setText("");
-							JOptionPane.showMessageDialog(frame, "Account created successfully!", "Success", JOptionPane.PLAIN_MESSAGE);
-							frame.dispose();
-							
-						} catch (SQLException e1) {
-							JOptionPane.showMessageDialog(frame, "Please try again.", "Warning", JOptionPane.WARNING_MESSAGE);
-						}
-						
-					}
-					else {
-						JOptionPane.showMessageDialog(frame, "Passwords do not match.", "Warning", JOptionPane.WARNING_MESSAGE);
-					}
-				}
-			}
-		});
-		
+		JLabel title = AppTheme.createTitleLabel("Create your account");
+		card.add(title, gbc);
+
+		gbc.gridy++;
+		gbc.insets = new Insets(0, 0, 24, 0);
+		card.add(AppTheme.createMutedLabel("Use a unique username so guests can find your quizzes later."), gbc);
+
+		gbc.gridy++;
+		gbc.insets = new Insets(0, 0, 6, 0);
+		card.add(createFieldLabel("Full name"), gbc);
+
+		gbc.gridy++;
+		gbc.insets = new Insets(0, 0, 14, 0);
+		final JTextField fullNameField = AppTheme.createTextField(24);
+		card.add(fullNameField, gbc);
+
+		gbc.gridy++;
+		gbc.insets = new Insets(0, 0, 6, 0);
+		card.add(createFieldLabel("Username"), gbc);
+
+		gbc.gridy++;
+		gbc.insets = new Insets(0, 0, 14, 0);
+		final JTextField usernameField = AppTheme.createTextField(24);
+		card.add(usernameField, gbc);
+
+		gbc.gridy++;
+		gbc.gridwidth = 1;
+		gbc.insets = new Insets(0, 0, 6, 10);
+		card.add(createFieldLabel("Password"), gbc);
+
+		gbc.gridx = 1;
+		gbc.insets = new Insets(0, 10, 6, 0);
+		card.add(createFieldLabel("Confirm password"), gbc);
+
+		gbc.gridy++;
+		gbc.gridx = 0;
+		gbc.insets = new Insets(0, 0, 20, 10);
+		final JPasswordField passwordField = AppTheme.createPasswordField(12);
+		card.add(passwordField, gbc);
+
+		gbc.gridx = 1;
+		gbc.insets = new Insets(0, 10, 20, 0);
+		final JPasswordField confirmPasswordField = AppTheme.createPasswordField(12);
+		card.add(confirmPasswordField, gbc);
+
+		gbc.gridy++;
+		gbc.gridx = 0;
+		gbc.gridwidth = 2;
+		gbc.insets = new Insets(0, 0, 0, 0);
+		javax.swing.JButton createButton = AppTheme.createPrimaryButton("Create Account");
+		card.add(createButton, gbc);
+
+		shell.add(card);
+		frame.add(shell);
+		frame.getRootPane().setDefaultButton(createButton);
+
+		createButton.addActionListener(e -> handleSignup(frame, fullNameField, usernameField, passwordField, confirmPasswordField));
+
 		frame.setVisible(true);
-    }
-}
+	}
 
+	private void handleSignup(JFrame frame, JTextField fullNameField, JTextField usernameField, JPasswordField passwordField,
+			JPasswordField confirmPasswordField) {
+		String fullName = fullNameField.getText().trim();
+		String username = usernameField.getText().trim();
+		String password = new String(passwordField.getPassword());
+		String confirmPassword = new String(confirmPasswordField.getPassword());
+
+		if (fullName.isEmpty() || username.isEmpty() || password.trim().isEmpty() || confirmPassword.trim().isEmpty()) {
+			JOptionPane.showMessageDialog(frame, "Fill in every field before creating the account.", "Missing Information", JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		if (username.contains(" ")) {
+			JOptionPane.showMessageDialog(frame, "Usernames cannot contain spaces.", "Invalid Username", JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		if (password.length() < 6) {
+			JOptionPane.showMessageDialog(frame, "Passwords should be at least 6 characters long.", "Weak Password", JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		if (!password.equals(confirmPassword)) {
+			JOptionPane.showMessageDialog(frame, "The passwords do not match.", "Password Mismatch", JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		try (SQLoperations manage = new SQLoperations()) {
+			if (manage.checkUsername(username)) {
+				JOptionPane.showMessageDialog(frame, "That username is already in use.", "Username Taken", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+
+			manage.newUser(fullName, username, password);
+			JOptionPane.showMessageDialog(frame, "Account created. You can now sign in.", "Success", JOptionPane.INFORMATION_MESSAGE);
+			frame.dispose();
+		} catch (IllegalArgumentException ex) {
+			JOptionPane.showMessageDialog(frame, ex.getMessage(), "Invalid Information", JOptionPane.WARNING_MESSAGE);
+		} catch (SQLException ex) {
+			String message = "Unable to create the account. Check your database setup and try again.\n\n" + ex.getMessage();
+			JOptionPane.showMessageDialog(frame, message, "Database Error", JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
+	private JLabel createFieldLabel(String text) {
+		JLabel label = new JLabel(text);
+		label.setFont(AppTheme.LABEL_FONT);
+		label.setForeground(AppTheme.TEXT_SECONDARY);
+		return label;
+	}
+}

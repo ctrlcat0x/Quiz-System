@@ -1,10 +1,9 @@
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.sql.ResultSet;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -14,162 +13,214 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 
 public class guest {
-	
-	private static final Color PRIMARY = new Color(99, 102, 241);
-	private static final Color BG_COLOR = new Color(249, 250, 251);
-	private static final Color CARD_COLOR = Color.WHITE;
-	private static final Font HEADING_FONT = new Font("SansSerif", Font.BOLD, 26);
-	private static final Font QUESTION_FONT = new Font("SansSerif", Font.BOLD, 16);
-	private static final Font OPTION_FONT = new Font("SansSerif", Font.PLAIN, 14);
-	private static final Font BUTTON_FONT = new Font("SansSerif", Font.BOLD, 14);
 
-	SQLoperations manage;
-	int[] opt;
-	int k;
-	
-	public void guestView(String surveyCode) throws SQLException {
-		
-		manage = new SQLoperations();
-		ResultSet rst = manage.getQuestions(surveyCode);
-		opt = new int[50];
-		
-		JFrame frame = new JFrame("Quiz System - Taking Quiz");
-		frame.setSize(650, 520);
-		frame.setLayout(null);
-		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-		frame.setLocationRelativeTo(null);
-		frame.getContentPane().setBackground(BG_COLOR);
-		frame.setResizable(false);
+	private JFrame frame;
+	private JLabel progressLabel;
+	private JTextArea questionArea;
+	private JRadioButton[] optionButtons;
+	private JPanel[] optionPanels;
+	private ButtonGroup buttonGroup;
+	private JButton previousButton;
+	private JButton nextButton;
+	private List<QuizQuestion> questions;
+	private int[] answers;
+	private int currentQuestionIndex;
+	private String surveyCode;
 
-		JLabel start = new JLabel("Taking Quiz: " + surveyCode);
-		start.setBounds(0, 15, 650, 35);
-		start.setHorizontalAlignment(JLabel.CENTER);
-		start.setFont(HEADING_FONT);
-		start.setForeground(PRIMARY);
-		frame.add(start);
+	public void guestView(String surveyCode) {
+		this.surveyCode = surveyCode == null ? "" : surveyCode.trim().toUpperCase();
 
-		JPanel card = new JPanel();
-		card.setBounds(50, 65, 545, 350);
-		card.setLayout(null);
-		card.setBackground(CARD_COLOR);
-		card.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(new Color(229, 231, 235), 1),
-			BorderFactory.createEmptyBorder(15, 15, 15, 15)
-		));
-		frame.add(card);
-		
-		JLabel ques = new JLabel("Loading question...");
-		ques.setBounds(30, 20, 490, 30);
-		ques.setFont(QUESTION_FONT);
-		ques.setForeground(new Color(17, 24, 39));
-		card.add(ques);
-		
-		JRadioButton op1 = new JRadioButton("Option 1");
-		JRadioButton op2 = new JRadioButton("Option 2");
-		JRadioButton op3 = new JRadioButton("Option 3");
-		JRadioButton op4 = new JRadioButton("Option 4");
-		
-		ButtonGroup bgroup = new ButtonGroup();
-		bgroup.add(op1);
-		bgroup.add(op2);
-		bgroup.add(op3);
-		bgroup.add(op4);
-		
-		op1.setBounds(50, 70, 450, 35);
-		op2.setBounds(50, 115, 450, 35);
-		op3.setBounds(50, 160, 450, 35);
-		op4.setBounds(50, 205, 450, 35);
-		
-		op1.setFont(OPTION_FONT);
-		op2.setFont(OPTION_FONT);
-		op3.setFont(OPTION_FONT);
-		op4.setFont(OPTION_FONT);
-
-		op1.setBackground(CARD_COLOR);
-		op2.setBackground(CARD_COLOR);
-		op3.setBackground(CARD_COLOR);
-		op4.setBackground(CARD_COLOR);
-
-		op1.setFocusPainted(false);
-		op2.setFocusPainted(false);
-		op3.setFocusPainted(false);
-		op4.setFocusPainted(false);
-		
-		if(rst.next()) {
-			ques.setText("Q1: " + rst.getString("question"));
-			op1.setText(rst.getString("option1"));
-			op2.setText(rst.getString("option2"));
-			op3.setText(rst.getString("option3"));
-			op4.setText(rst.getString("option4"));
+		try (SQLoperations manage = new SQLoperations()) {
+			questions = manage.getQuizQuestions(this.surveyCode);
+		} catch (SQLException ex) {
+			JOptionPane.showMessageDialog(null,
+				"Unable to load that quiz right now.\n\n" + ex.getMessage(),
+				"Database Error",
+				JOptionPane.ERROR_MESSAGE);
+			return;
 		}
-		
-		card.add(op1);
-		card.add(op2);
-		card.add(op3);
-		card.add(op4);
-		k=0;
-		
-		JButton nextButton = new JButton("NEXT QUESTION");
-		nextButton.setBounds(30, 275, 490, 45);
-		nextButton.setFont(BUTTON_FONT);
-		nextButton.setBackground(PRIMARY);
-		nextButton.setForeground(Color.WHITE);
-		nextButton.setFocusPainted(false);
-		nextButton.setBorderPainted(false);
-		nextButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		card.add(nextButton);
-		nextButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				int x;
-				if(op1.isSelected()) {
-					x=1;
-				}
-				else if(op2.isSelected()) {
-					x=2;
-				}
-				else if(op3.isSelected()) {
-					x=3;
-				}
-				else if(op4.isSelected()) {
-					x=4;
-				}
-				else
-					x=0;
-				
-				if(x!=0) {		
-					opt[k] = x;
-					k++;
-					try {
-						if(rst.next()) {
-							ques.setText("Q" + (k + 1) + ": " + rst.getString("question"));
-							op1.setText(rst.getString("option1"));
-							op2.setText(rst.getString("option2"));
-							op3.setText(rst.getString("option3"));
-							op4.setText(rst.getString("option4"));
-						}
-						else {
-							for(int j=0; j<k; j++) {
-								manage.answerUpdt(surveyCode, j+1, opt[j]);
-							}
-							JOptionPane.showMessageDialog(frame, "Quiz completed. Thank you!", "Congratulations", JOptionPane.PLAIN_MESSAGE);
-							manage.addTotal(surveyCode);
-							frame.dispose();
-						}
-					} catch (SQLException e1) {
-						e1.printStackTrace();
-					}
-				}
-				else {
-					JOptionPane.showMessageDialog(frame, "Please select an option.", "Warning", JOptionPane.WARNING_MESSAGE);
-				}
-				bgroup.clearSelection();
+
+		if (questions.isEmpty()) {
+			JOptionPane.showMessageDialog(null, "That quiz does not contain any questions.", "Empty Quiz", JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		answers = new int[questions.size()];
+		currentQuestionIndex = 0;
+
+		frame = AppTheme.createFrame("Complete Quiz", 760, 560, JFrame.DISPOSE_ON_CLOSE);
+		frame.setResizable(false);
+		frame.setLayout(new BorderLayout(20, 20));
+		frame.getRootPane().setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+
+		JPanel header = new JPanel(new BorderLayout(0, 8));
+		header.setOpaque(false);
+		JLabel title = AppTheme.createTitleLabel("Guest Quiz");
+		header.add(title, BorderLayout.NORTH);
+		progressLabel = AppTheme.createMutedLabel("");
+		header.add(progressLabel, BorderLayout.SOUTH);
+
+		JPanel card = AppTheme.createCard(new BorderLayout(0, 22), 24);
+		questionArea = AppTheme.createTextArea(4, 20, false);
+		questionArea.setFont(AppTheme.SECTION_FONT);
+		questionArea.setBackground(AppTheme.SURFACE);
+		questionArea.setPreferredSize(new Dimension(620, 100));
+		card.add(new JScrollPane(questionArea), BorderLayout.NORTH);
+
+		JPanel optionsPanel = new JPanel();
+		optionsPanel.setOpaque(false);
+		optionsPanel.setLayout(new javax.swing.BoxLayout(optionsPanel, javax.swing.BoxLayout.Y_AXIS));
+
+		buttonGroup = new ButtonGroup();
+		optionButtons = new JRadioButton[4];
+		optionPanels = new JPanel[4];
+		for (int index = 0; index < optionButtons.length; index++) {
+			optionButtons[index] = new JRadioButton();
+			optionButtons[index].setFont(AppTheme.BODY_FONT);
+			optionButtons[index].setOpaque(false);
+			optionButtons[index].setFocusPainted(false);
+			optionButtons[index].setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+
+			JPanel optionRow = new JPanel(new java.awt.BorderLayout());
+			optionRow.setBackground(AppTheme.SURFACE);
+			optionRow.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(AppTheme.BORDER, 1),
+				BorderFactory.createEmptyBorder(10, 14, 10, 14)
+			));
+			optionRow.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 48));
+			optionRow.add(optionButtons[index], java.awt.BorderLayout.CENTER);
+			optionPanels[index] = optionRow;
+
+			final int capturedIndex = index;
+			optionButtons[index].addActionListener(e -> highlightSelectedOption(capturedIndex));
+
+			buttonGroup.add(optionButtons[index]);
+			optionsPanel.add(optionRow);
+			if (index < 3) {
+				optionsPanel.add(javax.swing.Box.createVerticalStrut(6));
 			}
-		});
-		
+		}
+		card.add(optionsPanel, BorderLayout.CENTER);
+
+		JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+		actions.setOpaque(false);
+		previousButton = AppTheme.createSecondaryButton("Previous");
+		JButton cancelButton = AppTheme.createSecondaryButton("Cancel");
+		nextButton = AppTheme.createPrimaryButton("Next Question");
+		actions.add(previousButton);
+		actions.add(cancelButton);
+		actions.add(nextButton);
+		card.add(actions, BorderLayout.SOUTH);
+
+		previousButton.addActionListener(e -> goToPreviousQuestion());
+		cancelButton.addActionListener(e -> frame.dispose());
+		nextButton.addActionListener(e -> goToNextQuestion());
+
+		frame.add(header, BorderLayout.NORTH);
+		frame.add(card, BorderLayout.CENTER);
+
+		showQuestion();
 		frame.setVisible(true);
-		
+	}
+
+	private void goToPreviousQuestion() {
+		persistSelection(false);
+		if (currentQuestionIndex > 0) {
+			currentQuestionIndex--;
+			showQuestion();
+		}
+	}
+
+	private void goToNextQuestion() {
+		if (!persistSelection(true)) {
+			return;
+		}
+
+		if (currentQuestionIndex == questions.size() - 1) {
+			submitQuiz();
+			return;
+		}
+
+		currentQuestionIndex++;
+		showQuestion();
+	}
+
+	private boolean persistSelection(boolean requireSelection) {
+		int choice = getSelectedOption();
+		if (choice == 0 && requireSelection) {
+			JOptionPane.showMessageDialog(frame, "Choose one answer before continuing.", "Select an Answer", JOptionPane.WARNING_MESSAGE);
+			return false;
+		}
+
+		if (choice != 0) {
+			answers[currentQuestionIndex] = choice;
+		}
+		return true;
+	}
+
+	private int getSelectedOption() {
+		for (int index = 0; index < optionButtons.length; index++) {
+			if (optionButtons[index].isSelected()) {
+				return index + 1;
+			}
+		}
+		return 0;
+	}
+
+	private void showQuestion() {
+		QuizQuestion question = questions.get(currentQuestionIndex);
+		progressLabel.setText("Quiz code " + surveyCode + "  •  Question " + (currentQuestionIndex + 1) + " of " + questions.size());
+		questionArea.setText(question.getPrompt());
+		questionArea.setCaretPosition(0);
+
+		buttonGroup.clearSelection();
+		for (int index = 0; index < optionButtons.length; index++) {
+			optionButtons[index].setText(question.getOption(index));
+			optionPanels[index].setBackground(AppTheme.SURFACE);
+			optionPanels[index].setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(AppTheme.BORDER, 1),
+				BorderFactory.createEmptyBorder(10, 14, 10, 14)
+			));
+			if (answers[currentQuestionIndex] == index + 1) {
+				optionButtons[index].setSelected(true);
+				highlightSelectedOption(index);
+			}
+		}
+
+		previousButton.setEnabled(currentQuestionIndex > 0);
+		nextButton.setText(currentQuestionIndex == questions.size() - 1 ? "Submit Quiz" : "Next Question");
+	}
+
+	private void highlightSelectedOption(int selectedIndex) {
+		for (int index = 0; index < optionPanels.length; index++) {
+			boolean active = index == selectedIndex;
+			optionPanels[index].setBackground(active ? AppTheme.PRIMARY_SOFT : AppTheme.SURFACE);
+			optionPanels[index].setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(active ? AppTheme.PRIMARY : AppTheme.BORDER, 1),
+				BorderFactory.createEmptyBorder(10, 14, 10, 14)
+			));
+		}
+	}
+
+	private void submitQuiz() {
+		List<Integer> submittedAnswers = new ArrayList<Integer>();
+		for (int answer : answers) {
+			submittedAnswers.add(Integer.valueOf(answer));
+		}
+
+		try (SQLoperations manage = new SQLoperations()) {
+			manage.submitQuizResponses(surveyCode, submittedAnswers);
+			JOptionPane.showMessageDialog(frame, "Quiz completed. Thanks for responding.", "Submitted", JOptionPane.INFORMATION_MESSAGE);
+			frame.dispose();
+		} catch (SQLException ex) {
+			JOptionPane.showMessageDialog(frame,
+				"Unable to submit your answers right now.\n\n" + ex.getMessage(),
+				"Database Error",
+				JOptionPane.ERROR_MESSAGE);
+		}
 	}
 }
