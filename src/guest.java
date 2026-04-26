@@ -1,7 +1,6 @@
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,12 +33,12 @@ public class guest {
 	public void guestView(String surveyCode) {
 		this.surveyCode = surveyCode == null ? "" : surveyCode.trim().toUpperCase();
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			questions = manage.getQuizQuestions(this.surveyCode);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			JOptionPane.showMessageDialog(null,
 				"Unable to load that quiz right now.\n\n" + ex.getMessage(),
-				"Database Error",
+				"Error",
 				JOptionPane.ERROR_MESSAGE);
 			return;
 		}
@@ -220,16 +219,16 @@ public class guest {
 			submittedAnswers.add(Integer.valueOf(answer));
 		}
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			manage.submitQuizResponses(surveyCode, submittedAnswers);
 			JOptionPane.showMessageDialog(frame, "Quiz completed. Thanks for responding.", "Submitted", JOptionPane.INFORMATION_MESSAGE);
 			frame.dispose();
 		} catch (IllegalArgumentException ex) {
 			JOptionPane.showMessageDialog(frame, ex.getMessage(), "Incomplete Quiz", JOptionPane.WARNING_MESSAGE);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			JOptionPane.showMessageDialog(frame,
 				"Unable to submit your answers right now.\n\n" + ex.getMessage(),
-				"Database Error",
+				"Error",
 				JOptionPane.ERROR_MESSAGE);
 		}
 	}

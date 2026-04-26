@@ -1,0 +1,182 @@
+{
+  "actors": [
+    {
+      "fname": "Demo User",
+      "uname": "demo",
+      "pass": "sha256$0ead2060b65992dca4769af601a1b3a35ef38cfad2c2c465bb160ea764157c5d",
+      "id": 1
+    },
+    {
+      "fname": "Demo Instructor",
+      "uname": "demo_instructor",
+      "pass": "sha256$d3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791",
+      "id": 9001
+    }
+  ],
+  "responses": [
+    {
+      "quizcode": "59RQ4",
+      "submitted_at": "2026-04-26T23:06:53.5887795",
+      "response_id": 1,
+      "answers": [
+        4,
+        3
+      ],
+      "respondent_label": "Anonymous"
+    },
+    {
+      "quizcode": "CS101",
+      "submitted_at": "2026-04-26T23:12:47.7079446",
+      "response_id": 2,
+      "answers": [
+        2,
+        2,
+        1,
+        2
+      ],
+      "respondent_label": "Anonymous"
+    }
+  ],
+  "quizzes": [
+    {
+      "quizcode": "59RQ4",
+      "total": 1,
+      "questions": [
+        {
+          "qno": 1,
+          "question": "testing",
+          "option3": "c",
+          "option4": "d",
+          "option1": "a",
+          "option2": "b"
+        },
+        {
+          "qno": 2,
+          "question": "test 2",
+          "option3": "c",
+          "option4": "d",
+          "option1": "a",
+          "option2": "b"
+        }
+      ],
+      "id": 1
+    },
+    {
+      "quizcode": "CS101",
+      "total": 1,
+      "questions": [
+        {
+          "qno": 1,
+          "question": "What is the time complexity of binary search on a sorted array?",
+          "option3": "O(n log n)",
+          "option4": "O(1)",
+          "option1": "O(log n)",
+          "option2": "O(n)"
+        },
+        {
+          "qno": 2,
+          "question": "Which data structure follows FIFO order?",
+          "option3": "Tree",
+          "option4": "Graph",
+          "option1": "Queue",
+          "option2": "Stack"
+        },
+        {
+          "qno": 3,
+          "question": "Which protocol secures web traffic with encryption?",
+          "option3": "FTP",
+          "option4": "SMTP",
+          "option1": "HTTPS",
+          "option2": "HTTP"
+        },
+        {
+          "qno": 4,
+          "question": "Which unit performs arithmetic and logic operations in a CPU?",
+          "option3": "Cache",
+          "option4": "Control Bus",
+          "option1": "ALU",
+          "option2": "RAM"
+        }
+      ],
+      "id": 9001
+    },
+    {
+      "quizcode": "ALGO1",
+      "total": 0,
+      "questions": [
+        {
+          "qno": 1,
+          "question": "Dijkstra's algorithm assumes edge weights are:",
+          "option3": "Negative only",
+          "option4": "Prime numbers",
+          "option1": "Non-negative",
+          "option2": "All equal"
+        },
+        {
+          "qno": 2,
+          "question": "What is the average and worst-case time complexity of merge sort?",
+          "option3": "O(log n)",
+          "option4": "O(n^2)",
+          "option1": "O(n log n)",
+          "option2": "O(n)"
+        },
+        {
+          "qno": 3,
+          "question": "Depth-first search is typically implemented using:",
+          "option3": "A heap",
+          "option4": "A hash table",
+          "option1": "A stack (or recursion)",
+          "option2": "A queue"
+        },
+        {
+          "qno": 4,
+          "question": "Dynamic programming is most useful when subproblems are:",
+          "option3": "Random",
+          "option4": "Unordered",
+          "option1": "Overlapping",
+          "option2": "Independent"
+        }
+      ],
+      "id": 9001
+    },
+    {
+      "quizcode": "DBMS1",
+      "total": 0,
+      "questions": [
+        {
+          "qno": 1,
+          "question": "In ACID properties, the A stands for:",
+          "option3": "Accessibility",
+          "option4": "Adaptability",
+          "option1": "Atomicity",
+          "option2": "Availability"
+        },
+        {
+          "qno": 2,
+          "question": "Which normal form removes transitive dependencies?",
+          "option3": "Boyce-Codd Normal Form only",
+          "option4": "Zero Normal Form",
+          "option1": "Third Normal Form (3NF)",
+          "option2": "First Normal Form (1NF)"
+        },
+        {
+          "qno": 3,
+          "question": "Which SQL clause is used to aggregate rows into groups?",
+          "option3": "WHERE",
+          "option4": "LIMIT",
+          "option1": "GROUP BY",
+          "option2": "ORDER BY"
+        },
+        {
+          "qno": 4,
+          "question": "Which index type is commonly used for fast equality and range lookups?",
+          "option3": "Trie only",
+          "option4": "Linked List",
+          "option1": "B-tree",
+          "option2": "Bitmap only"
+        }
+      ],
+      "id": 9001
+    }
+  ]
+}

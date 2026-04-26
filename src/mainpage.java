@@ -5,7 +5,6 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,9 +74,9 @@ public class mainpage {
 	public void mainPageView(int id) {
 		this.id = id;
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			username = manage.getUsername(id);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			showDatabaseError("load your dashboard", ex);
 			return;
 		}
@@ -659,7 +658,7 @@ public class mainpage {
 			return;
 		}
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			String code = manage.createQuiz(id, draftQuestions);
 			AppTheme.copyToClipboard(code);
 			clearDraft();
@@ -672,7 +671,7 @@ public class mainpage {
 				JOptionPane.INFORMATION_MESSAGE);
 		} catch (IllegalArgumentException ex) {
 			JOptionPane.showMessageDialog(frame, ex.getMessage(), "Invalid Quiz", JOptionPane.WARNING_MESSAGE);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			showDatabaseError("create the quiz", ex);
 		}
 	}
@@ -680,7 +679,7 @@ public class mainpage {
 	private void refreshQuizTable(String preferredCode) {
 		String targetCode = preferredCode != null ? preferredCode : selectedQuizCode;
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			List<QuizSummary> quizzes = manage.getQuizSummaries(id, searchField == null ? "" : searchField.getText());
 			quizTableModel.setRowCount(0);
 			int targetRow = -1;
@@ -700,7 +699,7 @@ public class mainpage {
 
 			final int rowToSelect = targetRow >= 0 ? targetRow : 0;
 			SwingUtilities.invokeLater(() -> quizTable.setRowSelectionInterval(rowToSelect, rowToSelect));
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			showDatabaseError("load your quizzes", ex);
 		}
 	}
@@ -715,7 +714,7 @@ public class mainpage {
 		selectedQuizCode = String.valueOf(quizTableModel.getValueAt(row, 0));
 		selectedQuizResponses = ((Integer) quizTableModel.getValueAt(row, 1)).intValue();
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			List<QuizQuestion> questions = manage.getQuizQuestions(selectedQuizCode);
 			for (int index = 0; index < questions.size(); index++) {
 				questions.get(index).setVoteCounts(manage.getVoteCounts(selectedQuizCode, index + 1));
@@ -725,7 +724,7 @@ public class mainpage {
 			selectedQuizHasLegacyResponses = manage.hasLegacyQuizResponses(selectedQuizCode);
 			selectedQuestionIndex = 0;
 			renderSelectedQuestion();
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			showDatabaseError("load quiz details", ex);
 		}
 	}
@@ -930,10 +929,10 @@ public class mainpage {
 			return;
 		}
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			manage.removeSurvey(selectedQuizCode);
 			refreshQuizTable(null);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			showDatabaseError("delete the quiz", ex);
 		}
 	}
@@ -976,7 +975,7 @@ public class mainpage {
 			return;
 		}
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			if (!manage.validateUserPassword(id, currentPassword)) {
 				JOptionPane.showMessageDialog(frame, "The current password is incorrect.", "Password Incorrect", JOptionPane.WARNING_MESSAGE);
 				return;
@@ -984,7 +983,7 @@ public class mainpage {
 
 			manage.changePassword(id, newPassword);
 			JOptionPane.showMessageDialog(frame, "Password updated successfully.", "Password Changed", JOptionPane.INFORMATION_MESSAGE);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			showDatabaseError("change the password", ex);
 		}
 	}
@@ -996,10 +995,10 @@ public class mainpage {
 		AppTheme.setSidebarButtonState(viewQuizNavButton, !builderActive);
 	}
 
-	private void showDatabaseError(String action, SQLException ex) {
+	private void showDatabaseError(String action, Exception ex) {
 		JOptionPane.showMessageDialog(frame,
-			"Unable to " + action + ". Check your database setup and try again.\n\n" + ex.getMessage(),
-			"Database Error",
+			"Unable to " + action + ". An error occurred.\n\n" + ex.getMessage(),
+			"Error",
 			JOptionPane.ERROR_MESSAGE);
 	}
 }

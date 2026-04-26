@@ -4,7 +4,6 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.sql.SQLException;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -101,7 +100,7 @@ public class login {
 			return;
 		}
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			int authResult = manage.authUser(username, password);
 			if (authResult == -1) {
 				JOptionPane.showMessageDialog(frame, "No account was found for that username.", "Sign In Failed", JOptionPane.WARNING_MESSAGE);
@@ -115,7 +114,7 @@ public class login {
 
 			new mainpage().mainPageView(authResult);
 			frame.dispose();
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			showDatabaseError(frame, "sign in", ex);
 		}
 	}
@@ -140,14 +139,14 @@ public class login {
 			return;
 		}
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			if (!manage.check(surveyCode)) {
 				JOptionPane.showMessageDialog(frame, "That quiz code does not exist.", "Invalid Code", JOptionPane.WARNING_MESSAGE);
 				return;
 			}
 
 			new guest().guestView(surveyCode);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			showDatabaseError(frame, "open the quiz", ex);
 		}
 	}
@@ -159,11 +158,8 @@ public class login {
 		return label;
 	}
 
-	private void showDatabaseError(Component parent, String action, SQLException ex) {
-		String message = "Unable to " + action + ". Check your database settings and make sure MySQL is running.\n\n" + ex.getMessage();
-		if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("access denied for user")) {
-			message += "\n\nMySQL rejected the username or password. Start the app with the correct QUIZ_DB_USER and QUIZ_DB_PASS values, or use scripts/run.ps1 -DbUser <user> -DbPass <password>.";
-		}
-		JOptionPane.showMessageDialog(parent, message, "Database Error", JOptionPane.ERROR_MESSAGE);
+	private void showDatabaseError(Component parent, String action, Exception ex) {
+		String message = "Unable to " + action + ". An error occurred.\n\n" + ex.getMessage();
+		JOptionPane.showMessageDialog(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 }

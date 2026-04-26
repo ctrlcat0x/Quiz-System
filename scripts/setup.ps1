@@ -32,7 +32,14 @@ if (Get-Command mysql -ErrorAction SilentlyContinue) {
 
 Write-Host "[3/3] Compiling Java sources..."
 if (-not (Test-Path "out")) { New-Item -ItemType Directory -Path "out" | Out-Null }
-javac -d out src\*.java
+$jsonJar = "lib\json-20240303.jar"
+if (-not (Test-Path $jsonJar)) {
+    Write-Host "Downloading org.json library..."
+    if (-not (Test-Path "lib")) { New-Item -ItemType Directory -Path "lib" | Out-Null }
+    Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/org/json/json/20240303/json-20240303.jar" -OutFile $jsonJar
+}
+Copy-Item $jsonJar "out\json-20240303.jar" -Force
+javac -cp $jsonJar -d out src\*.java
 
 Write-Host ""
 Write-Host "Setup complete."

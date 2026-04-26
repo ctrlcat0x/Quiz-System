@@ -104,18 +104,15 @@ The seed file `database/schema_seed.sql` inserts a demo account and preset compu
 - `ALGO1` (algorithms)
 - `DBMS1` (database systems)
 
-Guests can use these codes from the login screen immediately after seeding.
+# From Quiz-System root — compile (once):
 
-## Project Logic Documentation
+.\scripts\setup.ps1
 
-Detailed architecture, flow, data model, and transaction logic is documented in:
+# Run:
 
-- `APP_LOGIC.md`
+cd out
+java -cp ".;json-20240303.jar" fallback_runner
 
-## Notes
+# View schema:
 
-- Existing plain-text passwords from older app versions still authenticate.
-- New and changed passwords are stored as SHA-256 (`sha256$...`).
-- App remains in the default Java package for simplicity.
-
-./scripts/run.ps1 -ConnectorJar "..\mysql-connector-j-9.6.0\mysql-connector-j-9.6.0.jar" -DbUser root -PromptForDbPass
+.\scripts\view_schema.ps1

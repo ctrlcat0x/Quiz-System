@@ -2,7 +2,6 @@ import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.sql.SQLException;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -125,7 +124,7 @@ public class signup {
 			return;
 		}
 
-		try (SQLoperations manage = new SQLoperations()) {
+		try (DbOperations manage = DbFactory.create()) {
 			if (manage.checkUsername(username)) {
 				JOptionPane.showMessageDialog(frame, "That username is already in use.", "Username Taken", JOptionPane.WARNING_MESSAGE);
 				return;
@@ -136,9 +135,9 @@ public class signup {
 			frame.dispose();
 		} catch (IllegalArgumentException ex) {
 			JOptionPane.showMessageDialog(frame, ex.getMessage(), "Invalid Information", JOptionPane.WARNING_MESSAGE);
-		} catch (SQLException ex) {
-			String message = "Unable to create the account. Check your database setup and try again.\n\n" + ex.getMessage();
-			JOptionPane.showMessageDialog(frame, message, "Database Error", JOptionPane.ERROR_MESSAGE);
+		} catch (Exception ex) {
+			String message = "Unable to create the account. An error occurred.\n\n" + ex.getMessage();
+			JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
 		}
 	}
 

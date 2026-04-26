@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class SQLoperations implements AutoCloseable {
+public class SQLoperations implements DbOperations {
 
 	private static final String DB_URL = "jdbc:mysql://localhost:3306/survey?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
 	private static final String DB_USER = "root";
